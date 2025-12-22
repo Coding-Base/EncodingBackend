@@ -1,0 +1,27 @@
+# Core Dependencies
+Django
+djangorestframework
+
+# AWS & Video Processing
+boto3
+botocore
+
+# Redis & Queue
+redis
+rq
+django-filter
+# Video Processing
+FFmpeg-python
+
+# Configuration
+python-dotenv
+python-decouple
+
+# HTTP Requests
+requests
+
+# Logging & Monitoring
+python-json-logger
+
+# Production
+gunicorn
