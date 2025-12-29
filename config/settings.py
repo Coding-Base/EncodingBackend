@@ -147,3 +147,6 @@ LOGGING = {
         'level': os.getenv('LOG_LEVEL', 'INFO'),
     },
 }
+
+AWS_S3_DEFAULT_SSE = os.getenv('AWS_S3_DEFAULT_SSE', 'AES256')
+AWS_S3_KMS_KEY_ID = os.getenv('AWS_S3_KMS_KEY_ID', None)
