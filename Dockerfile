@@ -22,7 +22,7 @@ WORKDIR /app
 
 # 1. Copy Requirements
 # Note: Ensure Dokploy Build Context is set to "/" (Root of Repo)
-COPY EncodingBackend/requirements.txt /app/requirements.txt
+COPY requirements.txt /app/requirements.txt
 
 # 2. Install Python Dependencies
 RUN python -m pip install --upgrade pip \
@@ -31,7 +31,7 @@ RUN python -m pip install --upgrade pip \
 
 # 3. Copy Application Code
 # This puts 'config/' directly inside '/app/config/'
-COPY EncodingBackend /app
+COPY . /app
 
 # 4. Set Environment Variables
 ENV FFMPEG_PATH=/usr/bin/ffmpeg
