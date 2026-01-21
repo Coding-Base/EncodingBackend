@@ -41,7 +41,7 @@ ENV PYTHONPATH=/app
 # 5. Expose Port 8000
 EXPOSE 8000
 
-# 6. Run Django via Gunicorn
-# "config.wsgi:application" tells Gunicorn to look in the 'config' folder,
-# find 'wsgi.py', and load the 'application' object.
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120"]
+# 6. Run Worker AND Django via Gunicorn
+# - "python -u worker_runner.py &": Runs the listener in background
+# - "gunicorn ...": Runs the web server in foreground
+CMD ["sh", "-c", "python -u worker_runner.py & gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"]

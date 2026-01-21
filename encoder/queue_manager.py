@@ -7,18 +7,22 @@ import os
 from django.conf import settings
 
 # Initialize Redis connection
-redis_host = os.getenv('REDIS_HOST', 'localhost')
-redis_port = int(os.getenv('REDIS_PORT', 6379))
+redis_url = os.getenv('REDIS_URL') or os.getenv('CELERY_BROKER_URL')
 redis_db = int(os.getenv('REDIS_DB', 1))
-redis_password = os.getenv('REDIS_PASSWORD', None)
-
-redis_client = redis.Redis(
-    host=redis_host,
-    port=redis_port,
-    db=redis_db,
-    password=redis_password,
-    decode_responses=True
-)
+if redis_url:
+    try:
+        redis_client = redis.from_url(redis_url, db=redis_db, decode_responses=True)
+    except Exception:
+        # fallback to host/port
+        redis_host = os.getenv('REDIS_HOST', 'localhost')
+        redis_port = int(os.getenv('REDIS_PORT', 6379))
+        redis_password = os.getenv('REDIS_PASSWORD', None)
+        redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password, decode_responses=True)
+else:
+    redis_host = os.getenv('REDIS_HOST', 'localhost')
+    redis_port = int(os.getenv('REDIS_PORT', 6379))
+    redis_password = os.getenv('REDIS_PASSWORD', None)
+    redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password, decode_responses=True)
 
 # Queue names
 ENCODING_QUEUE = 'video_encoding_queue'
