@@ -74,17 +74,17 @@ DATABASES = {
     }
 }
 
-# For production, use PostgreSQL:
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.getenv('DB_NAME'),
-#         'USER': os.getenv('DB_USER'),
-#         'PASSWORD': os.getenv('DB_PASSWORD'),
-#         'HOST': os.getenv('DB_HOST'),
-#         'PORT': os.getenv('DB_PORT', '5432'),
-#     }
-# }
+# ==================== Redis & Celery (CRITICAL UPDATE) ====================
+# This will now pick up the full connection string from Dokploy
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+
+# Configure Celery to use the Redis URL
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
