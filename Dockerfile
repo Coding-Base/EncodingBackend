@@ -41,7 +41,8 @@ ENV PYTHONPATH=/app
 # 5. Expose Port 8000
 EXPOSE 8000
 
-# 6. Run Worker AND Django via Gunicorn
+# 6. Run Migrations AND Worker AND Django via Gunicorn
+# - "python manage.py migrate": Apply database migrations
 # - "python -u worker_runner.py &": Runs the listener in background
 # - "gunicorn ...": Runs the web server in foreground
-CMD ["sh", "-c", "python -u worker_runner.py & gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"]
+CMD ["sh", "-c", "python manage.py migrate && python -u worker_runner.py & gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"]
