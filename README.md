@@ -382,7 +382,7 @@ Create `/etc/systemd/system/encoding-backend.service`:
 
 ```ini
 [Unit]
-Description=Lebanon Academy Encoding Backend
+Description=Lighthub Academy Encoding Backend
 After=network.target redis.service
 
 [Service]

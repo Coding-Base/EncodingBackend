@@ -4,24 +4,55 @@ Redis Queue Manager for handling encoding jobs
 import json
 import redis
 import os
+import uuid
 from django.conf import settings
 
 # Initialize Redis connection
-redis_url = os.getenv('REDIS_URL') or os.getenv('CELERY_BROKER_URL')
-redis_db = int(os.getenv('REDIS_DB', 1))
-if redis_url:
+# NOTE: The main backend uses DB 0. EncodingBackend must use the same DB.
+# When using redis.from_url() with a URL that already has a database number (e.g., redis://localhost:6379/0),
+# the db parameter is ignored. We need to properly parse and handle the database from the URL.
+
+redis_url = os.getenv('REDIS_URL') or os.getenv('CELERY_BROKER_URL') or 'redis://localhost:6379/0'
+
+# Parse database from URL if present, otherwise use from environment
+redis_db = 0  # Default to DB 0 to match main backend
+if 'redis://' in redis_url and '/' in redis_url.split('redis://')[-1]:
+    # Extract db number from URL (e.g., redis://localhost:6379/0 -> db=0)
     try:
-        redis_client = redis.from_url(redis_url, db=redis_db, decode_responses=True)
-    except Exception:
-        # fallback to host/port
-        redis_host = os.getenv('REDIS_HOST', 'localhost')
-        redis_port = int(os.getenv('REDIS_PORT', 6379))
-        redis_password = os.getenv('REDIS_PASSWORD', None)
-        redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password, decode_responses=True)
+        db_from_url = int(redis_url.split('/')[-1])
+        redis_db = db_from_url
+    except (ValueError, IndexError):
+        redis_db = 0
+
+# Allow environment variable to override
+if os.getenv('REDIS_DB'):
+    redis_db = int(os.getenv('REDIS_DB'))
+
+# Create Redis client - use parsed database number
+if redis_url and redis_url.startswith('redis://'):
+    try:
+        # Create from URL but ensure we use the right database
+        redis_client = redis.from_url(redis_url, decode_responses=True)
+        # redis.from_url respects the database in the URL, so this should work
+    except Exception as e:
+        print(f"Warning: redis.from_url failed ({e}), falling back to direct connection")
+        # Fallback: parse URL manually
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(redis_url)
+            redis_host = parsed.hostname or 'localhost'
+            redis_port = parsed.port or 6379
+            redis_password = parsed.password or None
+            redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password, decode_responses=True)
+        except Exception:
+            redis_host = os.getenv('REDIS_HOST', 'localhost')
+            redis_port = int(os.getenv('REDIS_PORT', 6379))
+            redis_password = os.getenv('REDIS_PASSWORD') or None
+            redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password, decode_responses=True)
 else:
     redis_host = os.getenv('REDIS_HOST', 'localhost')
     redis_port = int(os.getenv('REDIS_PORT', 6379))
-    redis_password = os.getenv('REDIS_PASSWORD', None)
+    redis_password = os.getenv('REDIS_PASSWORD') or None
     redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password, decode_responses=True)
 
 # Queue names
@@ -74,12 +105,26 @@ def get_next_job():
         job_json = redis_client.lpop(ENCODING_QUEUE)
         if job_json:
             job_data = json.loads(job_json)
+
+            # Ensure job_data has a job_id (backwards-compat with older producers)
+            if isinstance(job_data, dict):
+                if 'job_id' not in job_data or not job_data.get('job_id'):
+                    # Prefer video_id when available, otherwise create a UUID
+                    job_data['job_id'] = job_data.get('video_id') or str(uuid.uuid4())
+
             # Move to processing queue
             redis_client.rpush(ENCODING_PROCESSING, json.dumps(job_data))
             return job_data
         return None
     except Exception as e:
-        print(f"Error getting job from queue: {str(e)}")
+        error_msg = f"Error getting job from queue: {str(e)}"
+        print(f"✗ {error_msg}")
+        try:
+            import logging as log_module
+            logger = log_module.getLogger(__name__)
+            logger.error(error_msg, exc_info=True)
+        except:
+            pass
         return None
 
 
